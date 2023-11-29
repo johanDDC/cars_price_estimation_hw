@@ -79,8 +79,11 @@ def predict_items(
     X = column_transformer.transform(processed_features)
     y = 10 ** model.predict(X)
     df["selling_price"] = y
-    df.to_csv(buffer := io.StringIO(), index=False)
-    return StreamingResponse(iter(buffer), media_type="text/csv")
+    # df.to_csv(buffer := io.StringIO(), index=False)
+    return StreamingResponse(
+        io.StringIO(df.to_csv(index=False)),
+        media_type="text/csv",
+    )
 
 
 if __name__ == "__main__":
