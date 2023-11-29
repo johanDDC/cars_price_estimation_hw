@@ -1,14 +1,17 @@
+import io
 import pickle
 import uvicorn
+import pandas as pd
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LinearRegression
 
-from src.features_processor import process_features
+from src.features_processor import process_features, preprocess_collection
 from src.identity_transformer import IdentityTransformer
 
 MODEL_PATH = "assets/model.pickle"
@@ -51,19 +54,33 @@ def get_model():
 
 
 @app.post("/predict_item")
-def predict_item(item: Item, feature_dict: Dict[str, Any] = Depends(get_feature_dict),
-                 column_transformer: ColumnTransformer = Depends(get_column_transformer),
-                 model: LinearRegression = Depends(get_model)) -> float:
-    processed_features = process_features([item], feature_dict)
+def predict_item(
+    item: Item,
+    feature_dict: Dict[str, Any] = Depends(get_feature_dict),
+    column_transformer: ColumnTransformer = Depends(get_column_transformer),
+    model: LinearRegression = Depends(get_model),
+) -> float:
+    df = preprocess_collection([item])
+    processed_features = process_features(df, feature_dict)
     X = column_transformer.transform(processed_features)
-    y = model.predict(X)
-    return 10 ** y
+    y = 10 ** model.predict(X)
+    return y
 
 
 @app.post("/predict_items")
-def predict_items(items: List[Item]) -> List[float]:
-    pass
-    # return ...
+def predict_items(
+    csv: UploadFile,
+    feature_dict: Dict[str, Any] = Depends(get_feature_dict),
+    column_transformer: ColumnTransformer = Depends(get_column_transformer),
+    model: LinearRegression = Depends(get_model),
+) -> List[float]:
+    df = pd.read_csv(csv.file)
+    processed_features = process_features(df, feature_dict)
+    X = column_transformer.transform(processed_features)
+    y = 10 ** model.predict(X)
+    df["selling_price"] = y
+    df.to_csv(buffer := io.StringIO(), index=False)
+    return StreamingResponse(iter(buffer), media_type="text/csv")
 
 
 if __name__ == "__main__":
