@@ -14,7 +14,6 @@ class ServiceTest(TestCase):
         df = pd.read_csv(self.data_url)
         item = df.sample(1).to_dict(orient="records")
         resp = requests.post(self.server_url + path, json=item[0])
-        print(resp.content.decode("utf-8"))
         assert resp.status_code == 200
 
     def testPredictItems(self):
@@ -24,5 +23,4 @@ class ServiceTest(TestCase):
             buffer := io.StringIO(), index=False
         )
         resp = requests.post(self.server_url + path, files={"csv": buffer.getvalue()})
-        print(pd.read_csv(io.BytesIO(resp.content)))
         assert resp.status_code == 200
