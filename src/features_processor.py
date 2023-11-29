@@ -95,28 +95,27 @@ fillable_features = {"mileage", "engine", "max_power", "seats"}
 features_with_bonuses = {"year"}
 
 
-def process_features(items: List[Any], model_dict):
-    df = pd.DataFrame([item.dict() for item in items])
+def process_features(df: pd.DataFrame, feature_dict):
     processed_features = {}
     for col in df.columns:
         if col in feature_processors:
             if col in fillable_features:
                 processed_features.update(
-                    feature_processors[col](df[col], model_dict["medians"][col])
+                    feature_processors[col](df[col], feature_dict["medians"][col])
                 )
             elif col == "torque":
                 processed_features.update(
                     feature_processors[col](
                         df[col],
                         [
-                            model_dict["medians"]["torque"],
-                            model_dict["medians"]["max_torque_rpm"],
+                            feature_dict["medians"]["torque"],
+                            feature_dict["medians"]["max_torque_rpm"],
                         ],
                     )
                 )
             elif col in features_with_bonuses:
                 processed_features.update(
-                    feature_processors[col](df[col], **model_dict[col])
+                    feature_processors[col](df[col], **feature_dict[col])
                 )
             else:
                 processed_features.update(feature_processors[col](df[col]))
@@ -125,4 +124,5 @@ def process_features(items: List[Any], model_dict):
     return pd.DataFrame.from_dict(processed_features)
 
 
-# pd.DataFrame([{"a": 1, "b": 2}, {"a": 4, "b": 6}]).columns
+def preprocess_collection(items: List[Any]):
+    return pd.DataFrame([item.dict() for item in items])
